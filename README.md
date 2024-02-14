@@ -1,5 +1,14 @@
 Group Members:
 -------------------------
-*Guangyu Feng\n
-    *NetID: guangf1\n
-    *StudentID: 82985786\n
+
+Guangyu Feng:
+
+-NetID: guangf1 
+    
+-StudentID: 82985786
+
+Junyou Luo:
+
+-NetID: junyoul5
+
+-StudentID: 80522406
