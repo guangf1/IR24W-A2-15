@@ -12,6 +12,13 @@ class Worker(Thread):
         self.logger = get_logger(f"Worker-{worker_id}", "Worker")
         self.config = config
         self.frontier = frontier
+
+        self.visited = set()        #check for URL pattern and answer Q1
+        self.threshold = dict()     #detect repeated URL/trap
+        self.commonWords = dict()   #answer Q3
+        self.subdomains = dict()    #answer Q4
+        self.longest = 0            #answer Q2
+
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -29,6 +36,8 @@ class Worker(Thread):
                 f"using cache {self.config.cache_server}.")
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
-                self.frontier.add_url(scraped_url)
+                if scraper.second_check(scraped_url, self.visited, self.threshold): #
+                    self.frontier.add_url(scraped_url)
+            self.visited.add(tbd_url)                                               #
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
