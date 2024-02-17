@@ -1,6 +1,8 @@
 import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
+from itertools import islice
+
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -34,7 +36,7 @@ def extract_next_links(url, resp):
 
     for url in urls:
         parsed = urlparse(url)
-        no_frag = f"{parsed.scheme}://{parsed.netloc}{parsed.path};{parsed.params}?{parsed.query}"
+        no_frag = f"{parsed.scheme}://{parsed.hostname}{parsed.path};{parsed.params}?{parsed.query}"
         final.append(no_frag)
 
     return final
@@ -44,7 +46,7 @@ def is_valid(url):
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
     try:
-        domains = [".ics.uci.edu", ".cs.uci.edu", ".informatics.uci.edu", ".stat.uci.edu"]
+        domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
@@ -66,29 +68,87 @@ def is_valid(url):
 
 def second_check(URL, visited, threshold):
 
-    if URL in visited:
-        return False
-    if len(visited) > 12000:
-        return False
+    try:
+        if URL in visited:
+            return False
+        if len(visited) > 12000:
+            return False
 
-    parsed = urlparse(URL)
+        parsed = urlparse(URL)
 
-    if "calendar" in parsed.path:
-        return False
+        if "calendar" in parsed.path:
+            return False
 
-    paths = parsed.path.split("/")
+        paths = parsed.path.split("/")
 
-    if len(paths) < 3:
+        if len(paths) < 3:
+            return True
+
+        part = paths[1] + paths[2]
+
+        if part in threshold:
+            threshold[part] += 1
+        else:
+            threshold[part] = 1
+
+        if(threshold[part]) > 500:
+            return False
+
         return True
 
-    part = paths[1] + paths[2]
-
-    if part in threshold:
-        threshold[part] += 1
-    else:
-        threshold[part] = 1
-
-    if(threshold[part]) > 500:
+    except:
         return False
 
-    return True
+
+
+def update(url, resp, common, subdomain, longest, stopwords):
+
+    if(resp.status == 200):
+        try:
+
+            soup = BeautifulSoup(resp.raw_response.content, "html.parser")
+
+            content = soup.get_text(separator = ' ', strip=True).lower()
+            line_tokens = re.findall(r'[a-zA-Z0-9]+', content, re.ASCII)
+            longest[url] = len(line_tokens)     #Question 2
+
+            for word in line_tokens:    #Question3
+                if word not in stopwords:
+                    if word not in common:
+                        common[word] = 1
+                    else:
+                        common[word] += 1
+
+            parsed = urlparse(url)
+            if("ics.uci.edu" in parsed.hostname):   #Question4
+                part = parsed.hostname.split(".")
+                if part[0] != "ics":
+                    if parsed.scheme+"://"+parsed.hostname not in subdomain:
+                        subdomain[parsed.scheme+"://"+parsed.hostname] = 1
+                    else:
+                        subdomain[parsed.scheme+"://"+parsed.hostname] += 1
+
+
+
+        except:
+            pass
+    else:
+        pass
+
+
+def FinalPrint(visited, common, subdomain, longest):
+    print(len(visited))
+    print("\n")
+
+    sorted_longest = dict(sorted(longest.items(), key = lambda x: (-x[1], x[0])))
+    print(sorted_longest[0])
+    print("\n")
+
+    sorted_common = dict(sorted(common.items(), key = lambda x: (-x[1], x[0])))
+    for key, value in islice(sorted_common.items(), 50):
+        print(f'{key}: {value}')
+    print("\n")
+
+    sorted_sub = dict(sorted(subdomain.items(), key = lambda x: (-x[1], x[0])))
+    for key, value in sorted_sub.items():
+        print(f'{key}: {value}')
