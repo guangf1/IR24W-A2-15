@@ -42,17 +42,16 @@ def extract_next_links(url, resp):
     return final
 
 def is_valid(url):
-    # Decide whether to crawl this url or not. 
-    # If you decide to crawl it, return True; otherwise return False.
-    # There are already some conditions that return False.
     try:
         domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
         parsed = urlparse(url)
+        response = requests.head(url)
+        content = response.headers.get("Content-Length")
         if parsed.scheme not in set(["http", "https"]):
             return False
         elif not any(domain in parsed.hostname for domain in domains):
             return False
-        return not re.match(
+        elif re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
@@ -60,18 +59,37 @@ def is_valid(url):
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|txt|ppsx)$", parsed.path.lower())
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|txt|ppsx)$", parsed.path.lower()) :
+            return False
+        elif re.match(
+            r".*\.(css|js|bmp|gif|jpe?g|ico"
+            + r"|png|tiff?|mid|mp2|mp3|mp4"
+            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+            + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
+            + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
+            + r"|epub|dll|cnf|tgz|sha1"
+            + r"|thmx|mso|arff|rtf|jar|csv"
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz|txt|ppsx)$", parsed.query.lower()) :
+            return False
+        elif content == None or content > 1048576 or content < 500:
+            return False
+        elif response.status_code != 200:
+            return False
+        else:
+            return True
 
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+    except:
+        return False
 
 def second_check(URL, visited, threshold):
 
     try:
         if URL in visited:
             return False
-        if len(visited) > 12000:
+        if len(visited) > 10000:
             return False
 
         parsed = urlparse(URL)
@@ -86,12 +104,20 @@ def second_check(URL, visited, threshold):
 
         part = paths[1] + paths[2]
 
+        if paths[1] in threshold:
+            threshold[paths[1]] += 1
+        else:
+            threshold[paths[1]] = 1
+        
+        if threshold[paths[1]] > 500:
+            return False
+
         if part in threshold:
             threshold[part] += 1
         else:
             threshold[part] = 1
 
-        if(threshold[part]) > 500:
+        if threshold[part] > 100:
             return False
 
         return True
@@ -136,19 +162,23 @@ def update(url, resp, common, subdomain, longest, stopwords):
         pass
 
 
-def FinalPrint(visited, common, subdomain, longest):
-    print(len(visited))
-    print("\n")
+def FinalPrint(count, visited, common, subdomain, longest):
+    try:
+        print(count)
+        print(len(visited))
+        print("\n")
 
-    sorted_longest = dict(sorted(longest.items(), key = lambda x: (-x[1], x[0])))
-    print(sorted_longest[0])
-    print("\n")
+        sorted_longest = dict(sorted(longest.items(), key = lambda x: (-x[1], x[0])))
+        print(sorted_longest[0])
+        print("\n")
 
-    sorted_common = dict(sorted(common.items(), key = lambda x: (-x[1], x[0])))
-    for key, value in islice(sorted_common.items(), 50):
-        print(f'{key}: {value}')
-    print("\n")
+        sorted_common = dict(sorted(common.items(), key = lambda x: (-x[1], x[0])))
+        for key, value in islice(sorted_common.items(), 50):
+            print(f'{key}: {value}')
+        print("\n")
 
-    sorted_sub = dict(sorted(subdomain.items(), key = lambda x: (-x[1], x[0])))
-    for key, value in sorted_sub.items():
-        print(f'{key}: {value}')
+        sorted_sub = dict(sorted(subdomain.items(), key = lambda x: (-x[1], x[0])))
+        for key, value in sorted_sub.items():
+            print(f'{key}: {value}')
+    except:
+        pass

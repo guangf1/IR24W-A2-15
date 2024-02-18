@@ -21,6 +21,7 @@ class Worker(Thread):
         self.commonWords = dict()   #answer Q3
         self.subdomains = dict()    #answer Q4
         self.longest = dict()      #answer Q2
+        self.count = 0
 
         nltk.download('stopwords')
         self.stop_words = set(stopwords.words('english'))
@@ -35,7 +36,7 @@ class Worker(Thread):
             tbd_url = self.frontier.get_tbd_url()
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
-                scraper.FinalPrint(self.visited, self.commonWords, self.subdomains, self.longest)   #
+                scraper.FinalPrint(self.count, self.visited, self.commonWords, self.subdomains, self.longest)   #
                 break
             resp = download(tbd_url, self.config, self.logger)
             self.logger.info(
@@ -46,6 +47,7 @@ class Worker(Thread):
             for scraped_url in scraped_urls:
                 if scraper.second_check(scraped_url, self.visited, self.threshold): #
                     self.frontier.add_url(scraped_url)
-            self.visited.add(tbd_url)   #
+                    self.visited.add(scraped_url)   #
+            self.count += 1
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
