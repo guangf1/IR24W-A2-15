@@ -48,6 +48,7 @@ class Worker(Thread):
                 if scraper.second_check(scraped_url, self.visited, self.threshold): #
                     self.frontier.add_url(scraped_url)
                     self.visited.add(scraped_url)   #
-            self.count += 1
+            if resp.status == 200:
+                self.count += 1
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)

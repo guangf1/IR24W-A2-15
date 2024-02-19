@@ -44,12 +44,13 @@ def extract_next_links(url, resp):
 def is_valid(url):
     try:
         domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu"]
+        calendar_Q = ["calendar", "event", "month", "date", "week", "holiday", "day", "hour"]
         parsed = urlparse(url)
-        response = requests.head(url)
-        content = response.headers.get("Content-Length")
         if parsed.scheme not in set(["http", "https"]):
             return False
         elif not any(domain in parsed.hostname for domain in domains):
+            return False
+        elif any(keyword in parsed.query.lower() for keyword in calendar_Q):
             return False
         elif re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -71,10 +72,6 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz|txt|ppsx)$", parsed.query.lower()) :
             return False
-        elif content == None or content > 1048576 or content < 500:
-            return False
-        elif response.status_code != 200:
-            return False
         else:
             return True
 
@@ -89,13 +86,10 @@ def second_check(URL, visited, threshold):
     try:
         if URL in visited:
             return False
-        if len(visited) > 10000:
+        if len(visited) > 10500:
             return False
 
         parsed = urlparse(URL)
-
-        if "calendar" in parsed.path:
-            return False
 
         paths = parsed.path.split("/")
 
@@ -109,7 +103,7 @@ def second_check(URL, visited, threshold):
         else:
             threshold[paths[1]] = 1
         
-        if threshold[paths[1]] > 500:
+        if threshold[paths[1]] > 201:
             return False
 
         if part in threshold:
@@ -117,7 +111,7 @@ def second_check(URL, visited, threshold):
         else:
             threshold[part] = 1
 
-        if threshold[part] > 100:
+        if threshold[part] > 20:
             return False
 
         return True
